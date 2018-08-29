@@ -23,7 +23,7 @@ setup(
   ],
   keywords='bioinformatics',
   packages=['informverify'],
-  install_requires = ['pythologist>=0.1.7','PIL>=1.1.6'],
+  install_requires = ['pythologist>=0.1.7','Pillow>=2.2.1'],
   entry_points = {
     'console_scripts':['informverify=informverify:entry_point']
   }
