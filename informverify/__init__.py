@@ -241,11 +241,16 @@ def entry_point():
         errors.append((test,msg))
 
     sys.stderr.write("\n")
+    of = sys.stdout
+    if args.output:
+        of = open(args.output,'w')
     if len(errors) == 0:
-        print("PASS")
-    for error in errors:
-        print("FAIL")
-        print(error)
+        of.write("PASS\n")
+    else:
+        of.write("FAIL\n")
+        for error in errors:
+            of.write(str(error)+"\n")
+    if args.output: of.close()
 
 
 
@@ -253,6 +258,7 @@ def entry_point():
 def do_inputs():
     parser=argparse.ArgumentParser(description="Check assumptions on InForm inputs.",formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('INFORM_ANALYSIS',help="path of the INFORM_ANALYSIS folder for a sample")
+    parser.add_argument('-o','--output',help="path to write output STDOUT if not set")
     parser.add_argument('--panel_source',help="path to json defining panels",required=True)
     parser.add_argument('--panel_name',help="name of panel",required=True)
     parser.add_argument('--panel_version',help="version of panel",required=True)
