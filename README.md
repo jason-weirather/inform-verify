@@ -1,7 +1,9 @@
 # inform-verify
 Verify InForm format assumptions
 
-## Install inform-verify
+## Install and run inform-verify
+
+From a python3 environment
 
 `$ pip install informverify`
 
