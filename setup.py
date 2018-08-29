@@ -8,7 +8,7 @@ with open(path.join(this_folder,'README.md'),encoding='utf-8') as inf:
 
 setup(
   name='informverify',
-  version='0.1.0',
+  version='0.1.1',
   description='inForm PerkinElmer file assumption verification',
   long_description=long_description,
   url='https://github.com/jason-weirather/inform-verify',

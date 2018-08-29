@@ -1,6 +1,8 @@
 import argparse
 import re, os ,sys, json
+from hashlib import md5
 import pythologist
+from PIL import Image
 
 def entry_point():
     args = do_inputs()
@@ -22,6 +24,7 @@ def entry_point():
     for fname in fnames:
         if not os.path.isdir(fname): 
             msg = name+" is not a directory"
+            sys.stderr.write("ERROR: "+msg+"\n")
             errors.append((test,msg))
     #####
     test = "2. The INFORM_ANALYSIS folder contains a GIMP directory."
@@ -29,6 +32,7 @@ def entry_point():
     prospective = os.path.join(path,'GIMP')
     if not os.path.isdir(prospective): 
         msg = "no gimp folder "+prospective
+        sys.stderr.write("ERROR: "+msg+"\n")
         errors.append((test,msg))
 
     #####
@@ -56,6 +60,7 @@ def entry_point():
                 frames[project].append({'prefix':prefix,'frame':frame})
                 continue
             msg = "the filename does not fit expected naming conventions "+fname
+            sys.stderr.write("ERROR: "+msg+"\n")
             errors.append((test,msg))  
     if len(projects) == 0: 
         msg = "No project folders found"
@@ -66,6 +71,7 @@ def entry_point():
             p = pythologist.read_inForm(project,sample_index=1)
         except:
             msg = project+" failed to be read in "+project+" as an InForm project."
+            sys.stderr.write("ERROR: "+msg+"\n")
             errors.append((test,msg))
         pyth[project] = p
 
@@ -78,20 +84,63 @@ def entry_point():
         newset = set([x['frame'] for x in frames[project]])
         if frame_names != newset:
             msg = "projects do not contain the same ROIs according to the file names present"
+            sys.stderr.write("ERROR: "+msg+"\n")
             errors.append((test,msg))
 
     ####
-    test = "5. All phenotypes should be defined in the panel."
+    test = "5. The same file names should be present in each project folder"
+    sys.stderr.write(test+"\n")
+    flist1 = set(os.listdir(projects[0]))
+    for project in projects:
+        flist2 = set(os.listdir(project))
+    if flist1 != flist2:
+        msg = "The content of the InForm project folders is different."
+        sys.stderr.write("ERROR: "+msg+"\n")
+        errors.append((test,msg))
+
+    ####
+    test = "6. Projects should contain common expected inform export files"
+    extensions = ['_binary_seg_maps.tif','_cell_seg_data_summary.txt','_cell_seg_data.txt','_component_data.tif','_score_data.txt']
+    for project in projects:
+        for frame in frames[project]:
+            for extension in extensions:
+                check = os.path.join(project,frame['prefix']+'_'+frame['frame']+extension)
+                if not os.path.exists(check):
+                    msg = "Missing file "+check
+                    sys.stderr.write("ERROR: "+msg+"\n")
+                    errors.append((test,check))
+
+
+    ####
+    test = "7. The same binary_seg_maps.tif should be present for each ROI"
+    sys.stderr.write(test+"\n")
+    bin_md5s = dict()
+    for project in projects:
+        bin_md5s[project] = dict()
+        for fname in [x for x in os.listdir(project) if x.endswith('_binary_seg_maps.tif')]:
+            check = md5(open(os.path.join(project,fname),'rb').read()).hexdigest()
+            bin_md5s[project][fname] = check
+    reference = projects[0]
+    for project in projects:
+        for fname in bin_md5s[reference]:
+            if bin_md5s[reference][fname] != bin_md5s[project][fname]:
+                msg = "The ROI has different binary segmenation files between inform projects for "+fname
+                sys.stderr.write("ERROR: "+msg+"\n")
+                errors.append((test,msg))
+
+    ####
+    test = "8. All phenotypes observed should be defined in the panel."
     sys.stderr.write(test+"\n")
     for project in pyth:
         p = pyth[project]
         for phenotype in p.phenotypes:
             if phenotype not in panel["phenotypes"]: 
                 msg = "Saw phenotype "+phenotype+" in "+project+" that is not in the panel definition"
+                sys.stderr.write("ERROR: "+msg+"\n")
                 errors.append((test,msg))
 
     ####
-    test = "6. All of the panel's scored stains should be covered in the project files."
+    test = "9. All of the panel's scored stains should be covered in the project files."
     sys.stderr.write(test+"\n")
     stains = set([x['stain'] for x in panel["thresholds"]])
     for project in pyth:
@@ -100,39 +149,45 @@ def entry_point():
             if stain in stains: stains.remove(stain)
     if len(stains) > 0:
         msg = "The following scored stains expected from the panel are not represented in the InForm projects '"+"; ".join(list(sorted(stains)))+"'\n"
+        sys.stderr.write("ERROR: "+msg+"\n")
         errors.append((test,msg))
 
     ####
-    test = "7. The project folders should not contain GIMP images or GIMP created tif images"
+    test = "10. The project folders should not contain GIMP images or GIMP created tif images"
     sys.stderr.write(test+"\n")
     for project in projects:
         xcfs = [x for x in os.listdir(project) if x.endswith('.xcf')]
         if len(xcfs) > 0:
             msg = "There are gimp files "+str(xcfs)+" present in the project directory.  If GIMP files are necessary they should be in the "
+            sys.stderr.write("ERROR: "+msg+"\n")
             errors.append((test,msg))
         tiffs = [x for x in os.listdir(project) if x.endswith('.tiff')]
         if len(tiffs) > 0:
             msg = "Unexpected image file(s) present in project folder "+tiffs
+            sys.stderr.write("ERROR: "+msg+"\n")
             errors.append((test,msg))
         tiffs = [x for x in os.listdir(project) if re.search('tumor.*tif+$',x,re.IGNORECASE) ]
         if len(tiffs) > 0:
             msg = "Unexpected image file(s) present in project folder "+tiffs
+            sys.stderr.write("ERROR: "+msg+"\n")
             errors.append((test,msg))
         tiffs = [x for x in os.listdir(project) if re.search('invasive_margin.*tif+$',x,re.IGNORECASE) ]
         if len(tiffs) > 0:
             msg = "Unexpected image file(s) present in project folder "+tiffs
+            sys.stderr.write("ERROR: "+msg+"\n")
             errors.append((test,msg))
 
 
-    test = "8. The GIMP folder must contain tumor tif files for every ROI"
+    test = "11. The GIMP folder must contain tumor tif files for every ROI"
     sys.stderr.write(test+"\n")
     for x in frames[list(frames.keys())[0]]:
         check = os.path.join(prospective,x['prefix']+'_'+x['frame']+'_Tumor.tif')
         if not os.path.exists(check):
             msg = "Missing tumor tif "+check
+            sys.stderr.write("ERROR: "+msg+"\n")
             errors.append((test,msg))
 
-    test = "9. The GIMP folder must have properly named invasive margin files if they exist"
+    test = "12. The GIMP folder must have properly named invasive margin files if they exist"
     sys.stderr.write(test+"\n")
     tiffs = [x for x in os.listdir(prospective) if re.search('invasive_margin.*tif+$',x,re.IGNORECASE) ]
     possible = [x['prefix']+'_'+x['frame']+'_Invasive_Margin.tif' for x in frames[list(frames.keys())[0]]]
@@ -140,10 +195,11 @@ def entry_point():
         for tif in tiffs:
             if tif not in possible:
                 msg = "Improperly named invasive margin "+tif
+                sys.stderr.write("ERROR: "+msg+"\n")
                 errors.append((test,msg))
 
 
-    test = "10. The projects should have the same segmentation"
+    test = "13. The projects should have the same segmentation"
     sys.stderr.write(test+"\n")
     segs = dict()
     for project in pyth:
@@ -163,12 +219,35 @@ def entry_point():
             #print(frame)
             if segs[project][frame] != reference[frame]:
                 msg = "Segmentation is not the same between inform projects for frame "+frame
+                sys.stderr.write("ERROR: "+msg+"\n")
                 errors.append((test,msg))
 
+    test = "14. The cell_seg_data 'Cell X Position' and 'Cell Y Position' should be integers no larger than the image size" 
+    sys.stderr.write(test+"\n")
+    # get an image size
+    reference = projects[0]
+    rname = [x for x in os.listdir(reference) if x.endswith('_component_data.tif')][0]
+    image_size = Image.open(os.path.join(reference,rname)).size
+    failed = set()
+    for project in pyth:
+        df = pyth[project].df
+        for x in list(df.apply(lambda x: int(x['x']),1)):
+            if x > image_size[0]: failed.add(project)
+        for y in list(df.apply(lambda x: int(x['y']),1)):
+            if y > image_size[1]: failed.add(project)
+    if len(failed) > 0:
+        msg = "Cell position coordinates fall outside of the image size."
+        sys.stderr.write("ERROR: "+msg+"\n")
+        errors.append((test,msg))
+
+    sys.stderr.write("\n")
     if len(errors) == 0:
         print("PASS")
     for error in errors:
+        print("FAIL")
         print(error)
+
+
 
 
 def do_inputs():
