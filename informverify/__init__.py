@@ -203,7 +203,7 @@ def entry_point():
     sys.stderr.write(test+"\n")
     segs = dict()
     for project in pyth:
-        py = pyth[project]
+        py = pyth[project].df
         df = py[['x','y','frame']]
         #df['x'] =df['x'].astype(int)
         #df['y'] = df['y'].astype(int)
