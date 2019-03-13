@@ -8,7 +8,7 @@ with open(path.join(this_folder,'README.md'),encoding='utf-8') as inf:
 
 setup(
   name='informverify',
-  version='0.1.4',
+  version='0.1.5',
   description='inForm PerkinElmer file assumption verification',
   long_description=long_description,
   url='https://github.com/jason-weirather/inform-verify',
@@ -23,7 +23,7 @@ setup(
   ],
   keywords='bioinformatics',
   packages=['informverify'],
-  install_requires = ['pythologist>=0.1.10','Pillow>=2.2.1'],
+  install_requires = ['pythologist==0.1.10','Pillow>=2.2.1'],
   entry_points = {
     'console_scripts':['informverify=informverify:entry_point']
   }
